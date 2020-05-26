@@ -7,6 +7,19 @@ const app = express();
 
 app.use(express.json());
 app.use(cors());
+app.use('/repositories/:id', repoExists)
+
+function repoExists(req, res, next) { 
+  const { id } = req.params
+
+  const repoIndex = repositories.findIndex(repository => repository.id === id)
+
+  if (repoIndex < 0) 
+    return res.status(400).json({ error: 'Repository not found!'})
+  
+  res.locals.repoIndex = repoIndex
+  return next()
+}
 
 const repositories = [];
 
@@ -28,11 +41,7 @@ app.put("/repositories/:id", (req, res) => {
   const { id } = req.params
   const { title, url, techs } = req.body
 
-  const repoIndex = repositories.findIndex(repository => repository.id === id)
-
-  if (repoIndex  < 0) 
-    return res.status(400).json({ error: 'Repository not found!'})
-
+  const repoIndex = res.locals.repoIndex
   const repo = { 
     id, 
     title, 
@@ -47,26 +56,28 @@ app.put("/repositories/:id", (req, res) => {
 });
 
 app.delete("/repositories/:id", (req, res) => {
-  const { id } = req.params
-
-  const repoIndex = repositories.findIndex(repository => repository.id === id)
-
-  if (repoIndex< 0) 
-    return res.status(400).json({ error: 'Repository not found!'})
   
-  repositories.splice(repoIndex, 1)
+  repositories.splice(res.locals.repoIndex, 1)
 
   return res.status(204).send()
   
 });
 
 app.post("/repositories/:id/like", (req, res) => {
-  const { id } = req.params
 
-  const repoIndex = repositories.findIndex(repository => repository.id === id)
+  const repoIndex = res.locals.repoIndex
+  const repo = repositories[repoIndex]
 
-  if (repositories.findIndex(id) < 0) 
-    return res.status(400).json({ error: 'Repository not found!'})
+  let likesUp = repo.likes
+
+  const newRepo = {
+    ...repo,
+    likes: ++likesUp
+  }
+
+  repositories[repoIndex] = newRepo
+
+  return res.json(newRepo)
 });
 
 module.exports = app;
